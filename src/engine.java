@@ -102,9 +102,6 @@ public class engine{
 				}
 			}
 		}
-		if(did_work){
-			spawn();
-		}
 		return did_work;
 	}
 	/**
@@ -133,6 +130,16 @@ public class engine{
 			}
 		}
 		return true;
+	}
+	public int win(){
+		for(int x=0;x<4;x++) {
+			for(int y=0;y<4;y++) {
+				if(grid[x][y]>=9) {
+					return 1;
+				}
+			}
+		}
+		return 0;
 	}
 	@Override public String toString(){
 		StringBuilder out=new StringBuilder("");

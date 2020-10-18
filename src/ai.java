@@ -1,6 +1,6 @@
 import java.util.*;
 class globalno{
-	public static final double tlimit=2500;
+	public static final double tlimit=500;
 }
 class mcts{
 	public static final int runde=1000;
@@ -8,8 +8,11 @@ class mcts{
 		long l=System.currentTimeMillis();
 		player_node n=new player_node();
 		int cikli=0;
+		double score=e.score();
+		nat_node.smin=score;
+		player_node.smin=score;
 		while(System.currentTimeMillis()-l<globalno.tlimit){
-			for(int i=0;i<1;i++){
+			for(int i=0;i<10;i++){
 				n.run(e.clone());
 			}
 			cikli++;
@@ -17,6 +20,9 @@ class mcts{
 		if(console){
 			System.out.println(cikli);
 			System.out.println(n);
+			System.out.println(score);
+			System.out.println(String.format("%.2f",Math.pow(2,score+n.wins/n.plays)-Math.pow(2,score)));
+			System.out.println();
 		}
 		return n.best();
 
@@ -24,15 +30,16 @@ class mcts{
 
 }
 class nat_node{
-	public int wins;
+	public double wins;
 	public int plays;
 	player_node[] ch;
+	static double smin;
 	nat_node(){
 		this.ch=new player_node[32];
 		wins=0;
 		plays=0;
 	}
-	int explore(engine g){
+	double explore(engine g){
 		plays++;
 		engine g2=g.clone();
 		while(!g2.end()){
@@ -41,24 +48,14 @@ class nat_node{
 				g2.spawn();
 			}
 		}
-		int t=g2.win();
-		if(t==1) {
-			wins++;
-		}
-		return t;
+		wins+=g2.score()-smin;
+		return g2.score();
 	}
-	int run(engine g){
+	double run(engine g) throws Exception{
 		plays++;
-		if(g.win()==1) {
-			wins++;
-			return 1;
-		}
 		if(g.end()){
-			int t=g.win();
-			if(t==1){
-				wins++;
-			}
-			return t;
+			wins+=g.score()-smin;
+			return g.score();
 		}
 		while(true){
 			int x=(int)Math.floor(4*Math.random());
@@ -70,7 +67,7 @@ class nat_node{
 				}else{
 					p=16*0+4*x+y;
 				}
-				if(p>16){
+				if(p>=16){
 					g.grid[x][y]=1;
 				}else{
 					g.grid[x][y]=2;
@@ -78,35 +75,33 @@ class nat_node{
 				if(ch[p]==null){
 					ch[p]=new player_node();
 				}
-				int t=ch[p].run(g);
-				if(t==1) {
-					wins++;
-				}
+				double t=ch[p].run(g);
+				wins+=t-smin;
 				return t;
 			}
 		}
 	}
 	@Override public String toString(){
-		return wins+"/"+plays;
+		return String.format("%.4f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+plays;
 	}
+
 }
 class player_node{
-	public static final double c=1.5;
+	public static final double c=0.8;
 	nat_node[] ch;
-	int wins;
+	double wins;
 	int plays;
+	static double smin;
 	player_node(){
 		this.ch=new nat_node[4];
 		wins=0;
 		plays=0;
 	}
-	int run(engine g){
+	double run(engine g) throws Exception{
 		plays++;
 		if(g.end()){
-			if(g.win()==1){
-				wins+=1;
-			}
-			return g.win();
+			wins+=g.score()-smin;
+			return g.score();
 		}
 		for(int i=0;i<4;i++){
 			engine g2=g.clone();
@@ -116,11 +111,8 @@ class player_node{
 			if(ch[i]==null){
 				//run exploration
 				ch[i]=new nat_node();
-				int t=ch[i].explore(g);
-				plays++;
-				if(t==1){
-					wins++;
-				}
+				double t=ch[i].explore(g);
+				wins+=t-smin;
 				return t;//less DFS
 			}
 		}
@@ -140,13 +132,13 @@ class player_node{
 			}
 		}
 		if(next==-1){
-			return g.win();
+			System.out.println("That should never happen");
+			Thread.sleep(1000000);
+			return -1;
 		}
 		g.move(next);
-		int t=ch[next].run(g);
-		if(t==1){
-			wins++;
-		}
+		double t=ch[next].run(g);
+		wins+=t-smin;
 		return t;
 	}
 
@@ -165,6 +157,6 @@ class player_node{
 		return ans;
 	}
 	@Override public String toString(){
-		return wins+"/"+plays;
+		return String.format("%.4f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+plays;
 	}
 }

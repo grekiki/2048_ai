@@ -1,3 +1,4 @@
+import java.util.Arrays;
 
 public class engine{
 	public int[][] grid;
@@ -131,21 +132,17 @@ public class engine{
 		}
 		return true;
 	}
-	public int win(){
-		for(int x=0;x<4;x++) {
-			for(int y=0;y<4;y++) {
-				if(grid[x][y]>=9) {
-					return 1;
-				}
-			}
-		}
-		return 0;
-	}
+
 	@Override public String toString(){
 		StringBuilder out=new StringBuilder("");
 		for(int y=0;y<4;y++){
 			for(int x=0;x<4;x++){
-				out.append((char)('0'+grid[x][y])+" ");
+				if(grid[x][y]<10){
+					out.append(grid[x][y]+" ");
+				}else {
+					out.append((char)('a'-10+grid[x][y])+" ");
+					
+				}
 			}
 			out.append("\n");
 		}
@@ -159,6 +156,35 @@ public class engine{
 			}
 		}
 		return e;
+	}
+
+	@Override public int hashCode(){
+		return Arrays.deepHashCode(grid);
+	}
+
+	@Override public boolean equals(Object obj){
+		if(this==obj)
+			return true;
+		if(obj==null)
+			return false;
+		if(getClass()!=obj.getClass())
+			return false;
+		engine other=(engine)obj;
+		if(!Arrays.deepEquals(grid,other.grid))
+			return false;
+		return true;
+	}
+
+	public double score(){
+		int score=0;
+		for(int i=0;i<4;i++){
+			for(int j=0;j<4;j++){
+				score+=Math.pow(2,grid[i][j]);
+//				score=Math.max(score,grid[i][j]);
+			}
+		}
+		return Math.log(score)/Math.log(2);
+//		return score;
 	}
 
 }

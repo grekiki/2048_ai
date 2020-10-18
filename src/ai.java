@@ -1,28 +1,23 @@
 import java.util.*;
 class globalno{
-	public static final double tlimit=500;
+	public static final double tlimit=200;
 }
 class mcts{
-	public static final int runde=1000;
 	public static int play(engine e,boolean console) throws Exception{
 		long l=System.currentTimeMillis();
 		player_node n=new player_node();
-		int cikli=0;
 		double score=e.score();
 		nat_node.smin=score;
 		player_node.smin=score;
 		while(System.currentTimeMillis()-l<globalno.tlimit){
-			for(int i=0;i<10;i++){
+			for(int i=0;i<100;i++){
 				n.run(e.clone());
 			}
-			cikli++;
 		}
 		if(console){
-			System.out.println(cikli);
 			System.out.println(n);
 			System.out.println(score);
-			System.out.println(String.format("%.2f",Math.pow(2,score+n.wins/n.plays)-Math.pow(2,score)));
-			System.out.println();
+			n.run(e.clone());
 		}
 		return n.best();
 
@@ -39,13 +34,25 @@ class nat_node{
 		wins=0;
 		plays=0;
 	}
-	double explore(engine g){
+	double explore(engine g) throws Exception{
 		plays++;
 		engine g2=g.clone();
+		int[] q={0,3,0,1};//R U R D
 		while(!g2.end()){
-			int dir=(int)Math.floor(4*Math.random());
-			if(g2.move(dir)){
-				g2.spawn();
+			boolean found=false;
+			for(int dir:q){
+				if(g2.move(dir)){
+					g2.spawn();
+					found=true;
+				}
+			}
+			if(!found) {
+				if(g2.move(2)){
+					g2.spawn();
+				}else {
+					System.out.println("This should not happen");
+					Thread.sleep(10000);
+				}
 			}
 		}
 		wins+=g2.score()-smin;
@@ -87,7 +94,7 @@ class nat_node{
 
 }
 class player_node{
-	public static final double c=0.8;
+	public static final double c=30;
 	nat_node[] ch;
 	double wins;
 	int plays;
@@ -125,7 +132,7 @@ class player_node{
 				continue;
 			}
 			nat_node n=ch[t];
-			double score=((double)n.wins)/n.plays+c*Math.sqrt(Math.log(plays)/n.plays);
+			double score=Math.pow(2,n.wins/n.plays+smin)-Math.pow(2,smin)+c*Math.sqrt(Math.log(plays)/n.plays);
 			if(score>best){
 				best=score;
 				next=t;

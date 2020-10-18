@@ -3,21 +3,21 @@ class globalno{
 	public static final double tlimit=200;
 }
 class mcts{
-	public static int play(engine e,boolean console) throws Exception{
+	public static int play(long g,boolean console) throws Exception{
 		long l=System.currentTimeMillis();
 		player_node n=new player_node();
-		double score=e.score();
+		double score=BitBoards.score(g);
 		nat_node.smin=score;
 		player_node.smin=score;
 		while(System.currentTimeMillis()-l<globalno.tlimit){
 			for(int i=0;i<100;i++){
-				n.run(e.clone());
+				n.run(g);
 			}
 		}
 		if(console){
 			System.out.println(n);
 			System.out.println(score);
-			n.run(e.clone());
+			n.run(g);
 		}
 		return n.best();
 
@@ -29,55 +29,69 @@ class nat_node{
 	public int plays;
 	player_node[] ch;
 	static double smin;
+	long hash=-1;
 	nat_node(){
 		this.ch=new player_node[32];
 		wins=0;
 		plays=0;
 	}
-	double explore(engine g) throws Exception{
+	double explore(long g) throws Exception{
+		if(hash==-1) {
+			hash=g;
+		}
+		if(hash!=g) {
+			System.out.println("inconsistent");
+		}
 		plays++;
-		engine g2=g.clone();
 		int[] q={0,3,0,1};//R U R D
-		while(!g2.end()){
+		while(!BitBoards.isStuck(g)){
 			boolean found=false;
 			for(int dir:q){
-				if(g2.move(dir)){
-					g2.spawn();
+				if(BitBoards.canDirection(g,dir)){
+					g=BitBoards.move(g,dir);
+					g=BitBoards.spawn(g);
 					found=true;
 				}
 			}
-			if(!found) {
-				if(g2.move(2)){
-					g2.spawn();
-				}else {
+			if(!found){
+				if(BitBoards.canDirection(g,2)){
+					g=BitBoards.move(g,2);
+					g=BitBoards.spawn(g);
+				}else{
 					System.out.println("This should not happen");
 					Thread.sleep(10000);
 				}
 			}
 		}
-		wins+=g2.score()-smin;
-		return g2.score();
+		wins+=BitBoards.score(g)-smin;
+		return BitBoards.score(g);
 	}
-	double run(engine g) throws Exception{
+	double run(long g) throws Exception{
+		if(hash==-1) {
+			hash=g;
+		}
+		if(hash!=g) {
+			System.out.println("inconsistent");
+		}
 		plays++;
-		if(g.end()){
-			wins+=g.score()-smin;
-			return g.score();
+		if(BitBoards.isStuck(g)){
+			wins+=BitBoards.score(g)-smin;
+			return BitBoards.score(g);
 		}
 		while(true){
 			int x=(int)Math.floor(4*Math.random());
 			int y=(int)Math.floor(4*Math.random());
-			if(g.grid[x][y]==0){
+			if((g>>>4*(4*y+x)&0xf)==0){
 				int p;
 				if(Math.random()<0.9){
-					p=16*1+4*x+y;
+					p=16*1+4*y+x;
 				}else{
-					p=16*0+4*x+y;
+					p=16*0+4*y+x;
 				}
 				if(p>=16){
-					g.grid[x][y]=1;
+					g=g|1l<<4*(4*y+x);
 				}else{
-					g.grid[x][y]=2;
+					g=g|2l<<4*(4*y+x);
 				}
 				if(ch[p]==null){
 					ch[p]=new player_node();
@@ -89,35 +103,42 @@ class nat_node{
 		}
 	}
 	@Override public String toString(){
-		return String.format("%.4f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+plays;
+		return String.format("%.0f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+String.format("%.4f",smin*wins/plays)+" "+plays;
 	}
 
 }
 class player_node{
-	public static final double c=30;
+	public static final double c=150;
 	nat_node[] ch;
 	double wins;
 	int plays;
 	static double smin;
+	long hash=-1;
 	player_node(){
 		this.ch=new nat_node[4];
 		wins=0;
 		plays=0;
 	}
-	double run(engine g) throws Exception{
+	double run(long g) throws Exception{
+		if(hash==-1) {
+			hash=g;
+		}
+		if(hash!=g) {
+			System.out.println("inconsistent");
+		}
 		plays++;
-		if(g.end()){
-			wins+=g.score()-smin;
-			return g.score();
+		if(BitBoards.isStuck(g)){
+			wins+=BitBoards.score(g)-smin;
+			return BitBoards.score(g);
 		}
 		for(int i=0;i<4;i++){
-			engine g2=g.clone();
-			if(!g2.move(i)){
+			if(!BitBoards.canDirection(g,i)){
 				continue;
 			}
 			if(ch[i]==null){
 				//run exploration
 				ch[i]=new nat_node();
+				g=BitBoards.move(g,i);
 				double t=ch[i].explore(g);
 				wins+=t-smin;
 				return t;//less DFS
@@ -127,8 +148,7 @@ class player_node{
 		int next=-1;
 		for(int t=0;t<4;t++){
 			//Check if move is valid
-			engine g2=g.clone();
-			if(!g2.move(t)){
+			if(!BitBoards.canDirection(g,t)){
 				continue;
 			}
 			nat_node n=ch[t];
@@ -143,7 +163,7 @@ class player_node{
 			Thread.sleep(1000000);
 			return -1;
 		}
-		g.move(next);
+		g=BitBoards.move(g,next);
 		double t=ch[next].run(g);
 		wins+=t-smin;
 		return t;
@@ -164,6 +184,6 @@ class player_node{
 		return ans;
 	}
 	@Override public String toString(){
-		return String.format("%.4f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+plays;
+		return String.format("%.0f",Math.pow(2,wins/plays+smin)-Math.pow(2,smin))+" "+String.format("%.4f",smin*wins/plays)+" "+plays;
 	}
 }

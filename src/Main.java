@@ -5,7 +5,7 @@ public class Main{
 		long board=0;
 		board=BitBoards.spawn(board);
 		board=BitBoards.spawn(board);
-//		board=2319725582730929186l;
+//		board=6917691827489367330l;
 		System.out.println(BitBoards.print(board));
 		while(!BitBoards.isStuck(board)){
 			int dir=mcts.play(board,true);

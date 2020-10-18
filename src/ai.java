@@ -1,6 +1,6 @@
 import java.util.*;
 class globalno{
-	public static final double tlimit=200;
+	public static final double tlimit=300;
 }
 class mcts{
 	public static int play(long g,boolean console) throws Exception{
@@ -10,7 +10,7 @@ class mcts{
 		nat_node.smin=score;
 		player_node.smin=score;
 		while(System.currentTimeMillis()-l<globalno.tlimit){
-			for(int i=0;i<100;i++){
+			for(int i=0;i<1000;i++){
 				n.run(g);
 			}
 		}
@@ -36,10 +36,10 @@ class nat_node{
 		plays=0;
 	}
 	double explore(long g) throws Exception{
-		if(hash==-1) {
+		if(hash==-1){
 			hash=g;
 		}
-		if(hash!=g) {
+		if(hash!=g){
 			System.out.println("inconsistent");
 		}
 		plays++;
@@ -67,10 +67,10 @@ class nat_node{
 		return BitBoards.score(g);
 	}
 	double run(long g) throws Exception{
-		if(hash==-1) {
+		if(hash==-1){
 			hash=g;
 		}
-		if(hash!=g) {
+		if(hash!=g){
 			System.out.println("inconsistent");
 		}
 		plays++;
@@ -108,22 +108,24 @@ class nat_node{
 
 }
 class player_node{
-	public static final double c=150;
+	public static final double c=300;
+	static double smin;
 	nat_node[] ch;
 	double wins;
 	int plays;
-	static double smin;
 	long hash=-1;
+	boolean root=true;
+	boolean stuck=false;
 	player_node(){
 		this.ch=new nat_node[4];
 		wins=0;
 		plays=0;
 	}
 	double run(long g) throws Exception{
-		if(hash==-1) {
+		if(hash==-1){
 			hash=g;
 		}
-		if(hash!=g) {
+		if(hash!=g){
 			System.out.println("inconsistent");
 		}
 		plays++;
@@ -131,24 +133,27 @@ class player_node{
 			wins+=BitBoards.score(g)-smin;
 			return BitBoards.score(g);
 		}
-		for(int i=0;i<4;i++){
-			if(!BitBoards.canDirection(g,i)){
-				continue;
+		if(root){
+			for(int i=0;i<4;i++){
+				if(!BitBoards.canDirection(g,i)){
+					continue;
+				}
+				if(ch[i]==null){
+					//run exploration
+					ch[i]=new nat_node();
+					g=BitBoards.move(g,i);
+					double t=ch[i].explore(g);
+					wins+=t-smin;
+					return t;//less DFS
+				}
 			}
-			if(ch[i]==null){
-				//run exploration
-				ch[i]=new nat_node();
-				g=BitBoards.move(g,i);
-				double t=ch[i].explore(g);
-				wins+=t-smin;
-				return t;//less DFS
-			}
+			root=false;
 		}
 		double best=-1;//Probability of winning
 		int next=-1;
 		for(int t=0;t<4;t++){
 			//Check if move is valid
-			if(!BitBoards.canDirection(g,t)){
+			if(ch[t]==null){
 				continue;
 			}
 			nat_node n=ch[t];
